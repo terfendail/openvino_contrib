@@ -72,6 +72,66 @@ struct Tensor {
     std::unique_ptr<arm_compute::Tensor>    _notPaddedTensor;
 };
 
+inline std::ostream& operator<< (std::ostream& out, const arm_compute::Tensor& t) {
+    out << std::fixed << std::setprecision(7);
+    out << "Tensor shape:";
+    for (auto dim : t.info()->tensor_shape()) out << " " << dim;
+    out << " X " << t.info()->num_channels() << " chans" << std::endl;
+    auto qInfo = t.info()->quantization_info();
+    if (!qInfo.empty()) {
+        out << "Tensor quantization scales:";
+        for (auto sc : qInfo.scale()) out << " " << sc;
+        out << std::endl << "Tensor quantization offsets:";
+        for (auto of : qInfo.offset()) out << " " << of;
+        out << std::endl;
+    }
+
+    size_t showlen = t.info()->tensor_shape().total_size();
+    showlen = showlen > 100 ? 100 : showlen;
+    auto print_vals = [&](auto* vals, std::string tname) {
+        out << "Tensor vals(" << tname << "):";
+        for (int i = 0; i < showlen; ++i) std::cout << " " << static_cast<double>(vals[i]);
+        out << std::endl;
+    };
+
+    uint8_t* dptr = t.buffer();
+    switch (t.info()->data_type()) {
+        case arm_compute::DataType::U8       : print_vals(reinterpret_cast< uint8_t*>(dptr), "NU_8"); break;
+        case arm_compute::DataType::S8       : print_vals(reinterpret_cast<  int8_t*>(dptr), "NS_8"); break;
+        case arm_compute::DataType::U16      : print_vals(reinterpret_cast<uint16_t*>(dptr), "NU16"); break;
+        case arm_compute::DataType::S16      : print_vals(reinterpret_cast< int16_t*>(dptr), "NS16"); break;
+        case arm_compute::DataType::U32      : print_vals(reinterpret_cast<uint32_t*>(dptr), "NU32"); break;
+        case arm_compute::DataType::S32      : print_vals(reinterpret_cast< int32_t*>(dptr), "NS32"); break;
+        case arm_compute::DataType::U64      : print_vals(reinterpret_cast<uint64_t*>(dptr), "NU64"); break;
+        case arm_compute::DataType::S64      : print_vals(reinterpret_cast< int64_t*>(dptr), "NS64"); break;
+        case arm_compute::DataType::F16      : print_vals(reinterpret_cast<uint16_t*>(dptr), "NF16"); break;
+        case arm_compute::DataType::F32      : print_vals(reinterpret_cast<   float*>(dptr), "NF32"); break;
+        case arm_compute::DataType::F64      : print_vals(reinterpret_cast<  double*>(dptr), "NF64"); break;
+        case arm_compute::DataType::BFLOAT16 : print_vals(reinterpret_cast<uint16_t*>(dptr), "BF16"); break;
+        case arm_compute::DataType::SIZET    : print_vals(reinterpret_cast<  size_t*>(dptr), "SZ_T"); break;
+
+        case arm_compute::DataType::QSYMM8   : print_vals(reinterpret_cast<  uint8_t*>(dptr), "QS_8"); break;
+        case arm_compute::DataType::QASYMM8  : print_vals(reinterpret_cast<  uint8_t*>(dptr), "QA_8"); break;
+        case arm_compute::DataType::QASYMM8_SIGNED: print_vals(reinterpret_cast<int8_t*>(dptr), "QAS8"); break;
+        case arm_compute::DataType::QSYMM8_PER_CHANNEL: print_vals(reinterpret_cast<  uint8_t*>(dptr), "QSP8"); break;
+
+        case arm_compute::DataType::QSYMM16  : print_vals(reinterpret_cast<uint16_t*>(dptr), "QS16"); break;
+        case arm_compute::DataType::QASYMM16 : print_vals(reinterpret_cast<uint16_t*>(dptr), "QA16"); break;
+
+        default: out << "Unsupported ACL Data Type" << std::endl; break;
+    }
+
+    return out;
+}
+
+inline std::ostream& operator<< (std::ostream& out, const Tensor& t) {
+    arm_compute::Tensor* pt = t._tensor.get();
+    if (pt == nullptr)
+        out << "Tensor to print allocated incorrectly" << std::endl;
+    out << *pt;
+    return out;
+}
+
 template<typename Arg>
 struct Argument {
     operator Arg() {

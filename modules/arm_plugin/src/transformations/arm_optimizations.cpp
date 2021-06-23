@@ -99,7 +99,7 @@
 void ArmPlugin::pass::ArmOptimizations::Dump(const std::shared_ptr<ngraph::Function>& f, const std::string& postfix) {
     if (_dump) {
         ngraph::pass::VisualizeTree{f->get_friendly_name() + "_" + postfix +
-        (lpt ? std::string{"_lpt"} : std::string{""}) + ".dot",
+        (_lpt ? std::string{"_lpt"} : std::string{""}) + ".dot",
         [&] (const ngraph::Node& node, std::vector<std::string>& attributes) {
             auto& rt_info = node.get_rt_info();
             auto itInfo = rt_info.find("QuantizationInfo");

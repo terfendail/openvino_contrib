@@ -33,8 +33,8 @@ arm_compute::QuantizationInfo makeQuantizationInfo(
         } else if (zeroPointReal > qMax) {
             zeroPointNudged = qMax;
         } else {
-            if (round(zeroPointReal) != std::round(zeroPointReal))
-                dbg(round(zeroPointReal), std::round(zeroPointReal));
+            //if (round(zeroPointReal) != std::round(zeroPointReal))
+            //    dbg(round(zeroPointReal), std::round(zeroPointReal));
             zeroPointNudged = static_cast<std::int32_t>(round(zeroPointReal));
         }
         scale_vector.emplace_back(scale);
