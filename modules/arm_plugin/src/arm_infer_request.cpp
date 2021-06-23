@@ -231,7 +231,16 @@ void ArmInferRequest::InferImpl() {
             if (layer._layer._function != nullptr) {
                 OV_ITT_SCOPED_TASK(Itt::Domains::ArmPlugin, layer._profilingTask);
                 auto start = Time::now();
+
+                std::cout << "Layer: " << layer._node->get_friendly_name() << std::endl;
+                std::cout << "Inputs:" << std::endl;
+                for (auto&& input : layer._layer._inputs) { std::cout << *(input.second); }
+
                 layer._layer._function->run();
+
+                std::cout << "Outputs:" << std::endl;
+                for (auto&& input : layer._layer._outputs) { std::cout << input.second; }
+
                 layer._duration += Time::now() - start;
                 layer._counter++;
             }
