@@ -3,9 +3,18 @@
 //
 
 #include "transpose_arm.hpp"
+#include "arm_compute/core/Rounding.h"
 
 namespace ArmPlugin {
 namespace opset {
+
+float round(const float v) {
+#ifdef __aarch64__
+            return arm_compute::round(v, arm_compute::RoundingPolicy::TO_NEAREST_EVEN);
+#else  // __aarch64__
+            return arm_compute::round(v, arm_compute::RoundingPolicy::TO_ZERO);
+#endif // __aarch64__z
+}
 
 arm_compute::QuantizationInfo makeQuantizationInfo(
                 const ngraph::Output<ngraph::Node>& input_low_output,
@@ -24,7 +33,9 @@ arm_compute::QuantizationInfo makeQuantizationInfo(
         } else if (zeroPointReal > qMax) {
             zeroPointNudged = qMax;
         } else {
-            zeroPointNudged = static_cast<std::int32_t>(std::round(zeroPointReal));
+            if (round(zeroPointReal) != std::round(zeroPointReal))
+                dbg(round(zeroPointReal), std::round(zeroPointReal));
+            zeroPointNudged = static_cast<std::int32_t>(round(zeroPointReal));
         }
         scale_vector.emplace_back(scale);
         zero_point_vector.emplace_back(zeroPointNudged);
