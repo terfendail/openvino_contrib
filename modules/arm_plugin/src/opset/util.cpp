@@ -28,15 +28,13 @@ arm_compute::QuantizationInfo makeQuantizationInfo(
         auto scale = (max - min) / (qMax - qMin);
         auto zeroPointReal = qMin - min / scale;
         std::int32_t zeroPointNudged = 0;
-        if (zeroPointReal < qMin) {
-            zeroPointNudged = qMin;
-        } else if (zeroPointReal > qMax) {
-            zeroPointNudged = qMax;
-        } else {
-            //if (round(zeroPointReal) != std::round(zeroPointReal))
-            //    dbg(round(zeroPointReal), std::round(zeroPointReal));
+//        if (zeroPointReal < qMin) {
+//            zeroPointNudged = qMin;
+//        } else if (zeroPointReal > qMax) {
+//            zeroPointNudged = qMax;
+//        } else {
             zeroPointNudged = static_cast<std::int32_t>(round(zeroPointReal));
-        }
+//        }
         scale_vector.emplace_back(scale);
         zero_point_vector.emplace_back(zeroPointNudged);
     };

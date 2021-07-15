@@ -111,13 +111,22 @@ ArmPlugin::pass::ConvertQuantize::ConvertQuantize() {
                 auto offsets = quantizationInfo.offset();
                 if (scales.size() > 1) {
                     auto axis  = opset::Constant::create<int64_t>(ngraph::element::i64, ngraph::Shape{}, {1});
-                    auto split = std::make_shared<opset::Split>(fakeQuantize->input_value(0), axis, scales.size());
+                    auto split = std::make_shared<opset::Split>(input, axis, scales.size());
                     ngraph::copy_runtime_info(fakeQuantize, split);
                     split->set_friendly_name(fakeQuantize->get_friendly_name() + "_split");
                     ngraph::NodeVector concat_inputs;
                     for (std::size_t i = 0; i < scales.size(); ++i) {
+#ifndef __aarch64__
+                        auto shift05 = opset::Constant::create<float>(ngraph::element::f32, ngraph::Shape{}, {0.5f * scales[i]});
+                        auto armRoundAdd = std::make_shared<opset::Add>(split->output(i), shift05);
+                        armRoundAdd->set_friendly_name(fakeQuantize->get_friendly_name() + "_arm_round_add_" + std::to_string(i));
+                        ngraph::copy_runtime_info(fakeQuantize, armRoundAdd);
+                        auto armQuantize = std::make_shared<ngraph::op::TypeRelaxed<opset::ArmQuantize>>(
+                            Types{input_type}, Types{output_type}, armRoundAdd);
+#else
                         auto armQuantize = std::make_shared<ngraph::op::TypeRelaxed<opset::ArmQuantize>>(
                             Types{input_type}, Types{output_type}, split->output(i));
+#endif //__aarch64__
                         armQuantize->set_friendly_name(fakeQuantize->get_friendly_name() + "_arm_quantize_" + std::to_string(i));
                         ngraph::copy_runtime_info(fakeQuantize, armQuantize);
                         armQuantize->get_rt_info().emplace("QuantizationInfo",
@@ -134,7 +143,15 @@ ArmPlugin::pass::ConvertQuantize::ConvertQuantize() {
                             arm_compute::QuantizationInfo{1, 0}));
                     ngraph::replace_node(fakeQuantize, concat);
                 } else {
+#ifndef __aarch64__
+                    auto shift05 = opset::Constant::create<float>(ngraph::element::f32, ngraph::Shape{}, {0.5f * scales[0]});
+                    auto armRoundAdd = std::make_shared<opset::Add>(input, shift05);
+                    armRoundAdd->set_friendly_name(fakeQuantize->get_friendly_name() + "_arm_round_add");
+                    ngraph::copy_runtime_info(fakeQuantize, armRoundAdd);
+                    auto armQuantize = std::make_shared<ngraph::op::TypeRelaxed<opset::ArmQuantize>>(Types{input_type}, Types{output_type}, armRoundAdd);
+#else
                     auto armQuantize = std::make_shared<ngraph::op::TypeRelaxed<opset::ArmQuantize>>(Types{input_type}, Types{output_type}, input);
+#endif //__aarch64__
                     armQuantize->set_friendly_name(fakeQuantize->get_friendly_name() + "_arm_quantize");
                     ngraph::copy_runtime_info(fakeQuantize, armQuantize);
                     armQuantize->get_rt_info()["QuantizationInfo"] =
